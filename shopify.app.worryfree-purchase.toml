@@ -6,6 +6,9 @@ handle = "worry-free-purchase"
 application_url = "https://ra.seel.com/"
 embedded = false
 
+[build]
+include_config_on_deploy = false
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_all_orders,read_customers,read_fulfillments,read_orders,read_shipping,read_themes,write_content,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_script_tags,write_shipping,write_themes"
