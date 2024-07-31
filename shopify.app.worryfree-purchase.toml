@@ -1,0 +1,32 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "0195578f6b9dbe0abd78b027600dd448"
+name = "Worry‑Free Purchase"
+handle = "worry-free-purchase"
+application_url = "https://ra.seel.com/"
+embedded = false
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_all_orders,read_customers,read_fulfillments,read_orders,read_shipping,read_themes,write_content,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_script_tags,write_shipping,write_themes"
+
+[auth]
+redirect_urls = [ "https://ra.seel.com/auth/callback" ]
+
+[webhooks]
+api_version = "2024-04"
+
+  [[webhooks.subscriptions]]
+  uri = "https://api-test.seel.com/gateway/shopify/webhooks/redact_shopify_customers"
+  compliance_topics = [ "customers/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://api-test.seel.com/gateway/shopify/webhooks/redact_shopify_shop"
+  compliance_topics = [ "shop/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://api-test.seel.com/gateway/shopify/webhooks/request_shopify_customers_data"
+  compliance_topics = [ "customers/data_request" ]
+
+[pos]
+embedded = false
