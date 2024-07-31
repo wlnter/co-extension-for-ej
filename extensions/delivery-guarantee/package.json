@@ -1,0 +1,11 @@
+{
+  "name": "delivery-guarantee",
+  "private": true,
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@shopify/ui-extensions": "2024.4.x",
+    "lodash-es": "^4.17.21",
+    "uuid": "^9.0.1"
+  }
+}
