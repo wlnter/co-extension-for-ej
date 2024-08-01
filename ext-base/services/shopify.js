@@ -4,7 +4,6 @@ import { calculatePrices, convertGidToId, convertIdToGid } from "../utils.js";
 const { ACCEPTED } = quoteStatus;
 
 export const getProductVariant = async ({ shop, query }, line) => {
-  // 看到query中的双引号了么，老子调了半年
   const { errors, data } = await query(
     `query {
       product(id: "${btoa(line.productId)}") {
@@ -45,13 +44,13 @@ export const getProductVariant = async ({ shop, query }, line) => {
           }
         }
       }
-    }`,
+    }`
   );
   if (errors) {
     console.log(
       `Syntax error in GraphQL query: ${errors
         .map((err) => err.message)
-        .join(",")}`,
+        .join(",")}`
     );
     return null;
   } else if (data) {
@@ -74,7 +73,7 @@ export const constructCart = async ({ lines, shop, query }) => {
     };
   });
   let items = await Promise.all(
-    itemsInCart.map((item) => getProductVariant({ lines, shop, query }, item)),
+    itemsInCart.map((item) => getProductVariant({ lines, shop, query }, item))
   );
   items = items.filter(Boolean) || [];
   const cartLines = items.map(({ variant, product, cartLine }) => {
@@ -140,7 +139,7 @@ export const getOrCreateDeviceId = async ({ storage }) => {
 
 export const updateCartAttributes = async (
   { applyAttributeChange },
-  attributes,
+  attributes
 ) => {
   const result = await Promise.all(
     Object.entries(attributes).map(([key, value]) =>
@@ -148,8 +147,8 @@ export const updateCartAttributes = async (
         type: "updateAttribute",
         key,
         value,
-      }),
-    ),
+      })
+    )
   ).catch(console.log);
   return result;
 };
@@ -188,7 +187,7 @@ export const updateCart = async (
     currentWidgetStatus,
     seelVariantMatchedWithQuote,
     seelVariantsNotMatchedWithQuote,
-  },
+  }
 ) => {
   const { applyCartLinesChange } = api;
   // Remove variant whose variantId is not matched with quote
