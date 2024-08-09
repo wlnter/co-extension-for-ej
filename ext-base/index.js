@@ -1,5 +1,5 @@
-import { snapshot } from 'valtio/vanilla';
-import { subscribeKey } from 'valtio/utils';
+import { snapshot } from "valtio/vanilla";
+import { subscribeKey } from "valtio/utils";
 import {
   getMerchantConfig,
   constructCart,
@@ -9,12 +9,32 @@ import {
   queryNodeByProps,
   updateCart,
   updateCartAttributes,
-} from './services/index.js';
-import { extractFromLines, convertGidToId, splitSeelVariantsInCart, genAttributeKey, getPhaseName } from './utils.js';
-import { widgetPhase, quoteSource, quoteStatus, broadcastChannel } from './constant.js';
-import { performanceMarker, performanceMeasure } from './perf.js';
+} from "./services/index.js";
+import {
+  extractFromLines,
+  convertGidToId,
+  splitSeelVariantsInCart,
+  genAttributeKey,
+  getPhaseName,
+} from "./utils.js";
+import {
+  widgetPhase,
+  quoteSource,
+  quoteStatus,
+  broadcastChannel,
+} from "./constant.js";
+import { performanceMarker, performanceMeasure } from "./perf.js";
 
-const { INIT, LOADING, PROCESSING, QUOTING, CARTING, RENDERING, BINDING, COMPLETION } = widgetPhase;
+const {
+  INIT,
+  LOADING,
+  PROCESSING,
+  QUOTING,
+  CARTING,
+  RENDERING,
+  BINDING,
+  COMPLETION,
+} = widgetPhase;
 const { CHECKOUT } = quoteSource;
 const { ACCEPTED } = quoteStatus;
 
@@ -28,7 +48,10 @@ const subscriber = async (
   const { checkoutToken, cost, extension, shop } = api;
   performanceMarker(phase);
   if (phase === INIT) {
-    console.log(`${type}->${getPhaseName(phase)?.[0]}`.toUpperCase(), `-> UI extension (${name}) initialized`);
+    console.log(
+      `${type}->${getPhaseName(phase)?.[0]}`.toUpperCase(),
+      `-> UI extension (${name}) initialized`
+    );
     store.next = true;
   } else if (phase === LOADING) {
     store.merchantConfig = await getMerchantConfig(api, {
@@ -38,7 +61,7 @@ const subscriber = async (
       `${type}->${getPhaseName(phase)?.[0]}`.toUpperCase(),
       `-> Merchant config ${JSON.stringify(snapshot(store.merchantConfig))}`
     );
-    if (store.merchantConfig?.status === 'active') {
+    if (store.merchantConfig?.status === "active") {
       store.next = true;
     }
   } else if (phase === PROCESSING) {
@@ -49,7 +72,10 @@ const subscriber = async (
       token: checkoutToken.current,
       currency: cost.totalAmount.current.currencyCode,
     };
-    console.log(`${type}->${getPhaseName(phase)?.[0]}`.toUpperCase(), `-> Cart brief ${JSON.stringify(linesBrief)}`);
+    console.log(
+      `${type}->${getPhaseName(phase)?.[0]}`.toUpperCase(),
+      `-> Cart brief ${JSON.stringify(linesBrief)}`
+    );
     store.userId = await getOrCreateUserId(api);
     store.deviceId = await getOrCreateDeviceId(api);
     store.next = true;
@@ -70,11 +96,12 @@ const subscriber = async (
     store.next = true;
   } else if (phase === CARTING) {
     const { cart, quote, merchantConfig, seelProductId } = snapshot(store);
-    const [seelVariantMatchedWithQuote, seelVariantsNotMatchedWithQuote] = splitSeelVariantsInCart(api, {
-      cart,
-      quote,
-      seelProductId,
-    });
+    const [seelVariantMatchedWithQuote, seelVariantsNotMatchedWithQuote] =
+      splitSeelVariantsInCart(api, {
+        cart,
+        quote,
+        seelProductId,
+      });
 
     const checkboxElement = queryNodeByProps(root, {
       id: `${name}-checkbox`,
@@ -82,7 +109,9 @@ const subscriber = async (
     if (checkboxElement) {
       store.currentWidgetStatus = checkboxElement.props.value;
     } else {
-      store.currentWidgetStatus = Boolean(seelVariantMatchedWithQuote || merchantConfig?.defaultOpt === 'true');
+      store.currentWidgetStatus = Boolean(
+        seelVariantMatchedWithQuote || merchantConfig?.defaultOpt === "true"
+      );
     }
     channel.postMessage(
       `${name} will update cart -> ${JSON.stringify({
@@ -101,14 +130,14 @@ const subscriber = async (
       `-> Cart lines updated ${JSON.stringify(result)}.`
     );
     switch (result?.operation) {
-      case 'updateCartLine':
+      case "updateCartLine":
         break;
-      case 'removeCartLine':
+      case "removeCartLine":
         if (!result?.succeed) {
           store.currentWidgetStatus = true;
         }
         break;
-      case 'addCartLine':
+      case "addCartLine":
         if (!result?.succeed) {
           store.currentWidgetStatus = false;
         }
@@ -118,12 +147,13 @@ const subscriber = async (
     }
 
     updateCartAttributes(api, {
-      [genAttributeKey(type)]: quote?.quoteId || '',
+      [genAttributeKey(type)]: quote?.quoteId || "",
     });
 
     store.next = true;
   } else if (phase === RENDERING) {
-    const { name, currentWidgetStatus, quote, merchantConfig } = snapshot(store);
+    const { name, currentWidgetStatus, quote, merchantConfig } =
+      snapshot(store);
     const staledWidget = queryNodeByProps(root, {
       id: `${name}-widget`,
     });
@@ -145,7 +175,15 @@ const subscriber = async (
         const descriptionText = queryNodeByProps(root, {
           id: `${name}-description-text`,
         });
-        descriptionText.replaceChildren(root.createText(createDescription(quote)));
+        // descriptionText.replaceChildren(
+        //   root.createText(createDescription(quote))
+        // );
+
+        const returnWindow = merchantConfig?.returnConfig?.returnWindow;
+        descriptionText.replaceChildren(
+          root.createText(createDescription(quote, returnWindow))
+        );
+
         const checkbox = queryNodeByProps(root, { id: `${name}-checkbox` });
         checkbox.updateProps({
           value: currentWidgetStatus,
@@ -153,8 +191,10 @@ const subscriber = async (
         });
         console.log(
           `${type}->${getPhaseName(phase)?.[0] || phase}`.toUpperCase(),
-          `-> Widget should be re-rendered, the description is "${createDescription(quote)}", the checkbox status is ${
-            currentWidgetStatus ? 'check' : 'uncheck'
+          `-> Widget should be re-rendered, the description is "${createDescription(
+            quote
+          )}", the checkbox status is ${
+            currentWidgetStatus ? "check" : "uncheck"
           } and disabled.`
         );
       } else {
@@ -168,14 +208,18 @@ const subscriber = async (
         console.log(
           `${type}->${getPhaseName(phase)?.[0] || phase}`.toUpperCase(),
           `-> Widget should be appended, the checkbox status is ${
-            currentWidgetStatus ? 'check' : 'uncheck'
+            currentWidgetStatus ? "check" : "uncheck"
           } and disabled.`
         );
       }
     }
     console.log(
       `${type}->${getPhaseName(phase)?.[0] || phase}`.toUpperCase(),
-      `-> ${extension.rendered.current ? 'Widget rendering succeeded' : 'Widget rendering failed'}`
+      `-> ${
+        extension.rendered.current
+          ? "Widget rendering succeeded"
+          : "Widget rendering failed"
+      }`
     );
     if (extension.rendered.current) {
       store.next = true;
@@ -197,15 +241,21 @@ const subscriber = async (
     }
     store.next = true;
   } else if (phase === COMPLETION) {
-    console.log(`${type}->${getPhaseName(phase)?.[0] || phase}`.toUpperCase(), `-> Ready for user input`);
+    console.log(
+      `${type}->${getPhaseName(phase)?.[0] || phase}`.toUpperCase(),
+      `-> Ready for user input`
+    );
     performanceMeasure();
   }
 };
 
 const observer = async (lines, store, { root, api }) => {
-  const { type, linesBrief, quote, phase, seelProductId, name } = snapshot(store);
+  const { type, linesBrief, quote, phase, seelProductId, name } =
+    snapshot(store);
   const brief = extractFromLines(lines);
-  const intersection = Object.keys(brief).filter((id) => Object.keys(linesBrief).includes(id));
+  const intersection = Object.keys(brief).filter((id) =>
+    Object.keys(linesBrief).includes(id)
+  );
   const added = {};
   const removed = {};
   const updated = {};
@@ -227,11 +277,15 @@ const observer = async (lines, store, { root, api }) => {
   store.linesBrief = brief;
 
   // merhcandise changed
-  if (Object.keys(added).length || Object.keys(removed).length || Object.keys(updated).length) {
+  if (
+    Object.keys(added).length ||
+    Object.keys(removed).length ||
+    Object.keys(updated).length
+  ) {
     let shouldUpdateQuote = false;
     let shouldUpdateCart = false;
     Object.entries({ ...added, ...removed, ...updated }).forEach(([key]) => {
-      const [productId] = key.split('__');
+      const [productId] = key.split("__");
       if (productId != (quote?.productId || seelProductId)) {
         shouldUpdateQuote = true;
       } else {
@@ -271,13 +325,18 @@ const observer = async (lines, store, { root, api }) => {
   }
 };
 
-export const initialization = (root, api, store, { renderWidget, createDescription, onChangeHandler }) => {
+export const initialization = (
+  root,
+  api,
+  store,
+  { renderWidget, createDescription, onChangeHandler }
+) => {
   const channel = new BroadcastChannel(broadcastChannel);
-  channel.addEventListener('message', (event) => {
+  channel.addEventListener("message", (event) => {
     console.log(`${name} received message`, event.data);
   });
 
-  subscribeKey(store, 'phase', async (value) => {
+  subscribeKey(store, "phase", async (value) => {
     try {
       await subscriber(
         value,
@@ -290,7 +349,12 @@ export const initialization = (root, api, store, { renderWidget, createDescripti
         { root, api }
       );
     } catch (error) {
-      console.log(`Caught error in subscriber (${getPhaseName(store.phase)?.[0] || store.phase}):`, error);
+      console.log(
+        `Caught error in subscriber (${
+          getPhaseName(store.phase)?.[0] || store.phase
+        }):`,
+        error
+      );
     }
   });
 
@@ -298,7 +362,12 @@ export const initialization = (root, api, store, { renderWidget, createDescripti
     try {
       await observer(lines, store, { root, api });
     } catch (error) {
-      console.log(`Caught error in observer (${getPhaseName(store.phase)?.[0] || store.phase}):`, error);
+      console.log(
+        `Caught error in observer (${
+          getPhaseName(store.phase)?.[0] || store.phase
+        }):`,
+        error
+      );
     }
   });
 
