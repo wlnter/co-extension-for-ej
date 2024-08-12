@@ -29,7 +29,7 @@ export const onChangeHandler =
       id: `${name}-checkbox`,
     });
     if (checkbox) {
-      checkbox.updateProps({ value: checked });
+      checkbox.updateProps({ value: checked, disabled: true });
     }
     if (checked) {
       const resp = await applyCartLinesChange({
@@ -55,6 +55,7 @@ export const onChangeHandler =
         }
       }
     }
+    checkbox.updateProps({ disabled: false });
   };
 
 export const createDescription = (quote, returnWindow = "-") => {
