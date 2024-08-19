@@ -12,66 +12,46 @@ import {
 
 function createCard(root, props) {
   const { title, type, icon, contents = [] } = props || {};
-  return root.createComponent(
-    BlockLayout,
-    { rows: ["auto", "fill"], border: "base", cornerRadius: "base" },
-    [
-      root.createComponent(
-        View,
-        { padding: "base", border: ["none", "none", "base", "none"] },
-        root.createComponent(
-          TextBlock,
-          { emphasis: "bold", inlineAlignment: "center" },
-          title
-        )
-      ),
-      type === "list"
-        ? root.createComponent(
-            View,
-            {
-              padding: "base",
-              inlineAlignment: "center",
-              blockAlignment: "center",
-            },
-            root.createComponent(
-              BlockStack,
-              { spacing: "extraTight" },
-              contents.map((c) =>
-                root.createComponent(
-                  InlineStack,
-                  {
-                    overflow: "hidden",
-                    spacing: "extraTight",
-                    blockAlignment: "center",
-                  },
-                  [
-                    root.createComponent(Image, { source: icon }),
-                    root.createComponent(Text, { appearance: "subdued" }, c),
-                  ]
-                )
+  return root.createComponent(BlockLayout, { rows: ["auto", "fill"], border: "base", cornerRadius: "base" }, [
+    root.createComponent(
+      View,
+      { padding: "base", border: ["none", "none", "base", "none"] },
+      root.createComponent(TextBlock, { emphasis: "bold", inlineAlignment: "center" }, title)
+    ),
+    type === "list"
+      ? root.createComponent(
+          View,
+          {
+            padding: "base",
+            inlineAlignment: "center",
+            blockAlignment: "center",
+          },
+          root.createComponent(
+            BlockStack,
+            { spacing: "extraTight" },
+            contents.map((c) =>
+              root.createComponent(
+                InlineStack,
+                { overflow: "hidden", spacing: "extraTight", blockAlignment: "center" },
+                [
+                  root.createComponent(Image, { source: icon }),
+                  root.createComponent(Text, { appearance: "subdued" }, c),
+                ]
               )
             )
           )
-        : root.createComponent(
+        )
+      : root.createComponent(BlockStack, { inlineAlignment: "center", spacing: "tight", padding: "base" }, [
+          root.createComponent(Image, { source: icon }),
+          root.createComponent(
             BlockStack,
-            { inlineAlignment: "center", spacing: "tight", padding: "base" },
-            [
-              root.createComponent(Image, { source: icon }),
-              root.createComponent(
-                BlockStack,
-                { inlineAlignment: "center", spacing: "none" },
-                contents.map((c) =>
-                  root.createComponent(
-                    TextBlock,
-                    { inlineAlignment: "center", appearance: "subdued" },
-                    c
-                  )
-                )
-              ),
-            ]
+            { inlineAlignment: "center", spacing: "none" },
+            contents.map((c) =>
+              root.createComponent(TextBlock, { inlineAlignment: "center", appearance: "subdued" }, c)
+            )
           ),
-    ]
-  );
+        ]),
+  ]);
 }
 
 function createModal(root, props = {}, children = []) {

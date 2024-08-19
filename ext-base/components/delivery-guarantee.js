@@ -13,14 +13,14 @@ import {
   Icon,
   Pressable,
 } from "@shopify/ui-extensions/checkout";
-import { queryNodeByProps } from "../services/index.js";
+import { queryNodeByProps, updateCartAttributes, applyCartLinesChange } from "../services/index.js";
 import { convertIdToGid, formatMoney } from "../utils.js";
 import { createCard, createModal } from "./widget-modal.js";
 
 export const onChangeHandler =
-  (root, api, { name, quote }) =>
+  (root, api, { name, quote, type }) =>
   async (checked) => {
-    const { lines, applyCartLinesChange } = api;
+    const { lines } = api;
     const checkbox = queryNodeByProps(root, {
       id: `${name}-checkbox`,
     });
@@ -28,7 +28,7 @@ export const onChangeHandler =
       checkbox.updateProps({ value: checked, disabled: true });
     }
     if (checked) {
-      const resp = await applyCartLinesChange({
+      const resp = await applyCartLinesChange(api, {
         type: "addCartLine",
         merchandiseId: convertIdToGid(quote?.variantId),
         quantity: 1,
@@ -37,11 +37,9 @@ export const onChangeHandler =
         checkbox.updateProps({ value: !checked });
       }
     } else {
-      const cartLine = lines.current.find((line) =>
-        line.merchandise.id.includes(quote.variantId)
-      );
+      const cartLine = lines.current.find((line) => line.merchandise.id.includes(quote.variantId));
       if (cartLine?.id) {
-        const resp = await applyCartLinesChange({
+        const resp = await applyCartLinesChange(api, {
           type: "removeCartLine",
           id: cartLine.id,
           quantity: cartLine.quantity || 1,
@@ -52,6 +50,11 @@ export const onChangeHandler =
       }
     }
     checkbox.updateProps({ disabled: false });
+    await updateCartAttributes(api, {
+      type: "updateAttribute",
+      key: `${type}-checked`,
+      value: String(checked),
+    });
   };
 
 export const createDescription = (quote) => {
@@ -68,10 +71,7 @@ const createSpModal = (root) =>
     root.createComponent(
       Grid,
       {
-        columns: Style.default("fill").when(
-          { viewportInlineSize: { min: "small" } },
-          ["1fr", "1fr", "1fr"]
-        ),
+        columns: Style.default("fill").when({ viewportInlineSize: { min: "small" } }, ["1fr", "1fr", "1fr"]),
         spacing: "base",
       },
       [
@@ -85,9 +85,7 @@ const createSpModal = (root) =>
           title: "Instant resolution",
           type: "block",
           icon: "https://cdn.seel.com/assets/images/Group81592.svg",
-          contents: [
-            "Instantly resolve your shipment issues and get a refund or replacement with a few clicks.",
-          ],
+          contents: ["Instantly resolve your shipment issues and get a refund or replacement with a few clicks."],
         }),
         createCard(root, {
           title: "Protect our planet",
@@ -107,11 +105,7 @@ const createSpModal = (root) =>
         "Worry-Free Purchase offers peace of mind against package loss, damage, and theft, while offsetting carbon emissions from shipping for a greener planet. Should any covered incidents occur, use the ",
         root.createComponent(
           Link,
-          {
-            external: true,
-            appearance: "monochrome",
-            to: "https://www.seel.com",
-          },
+          { external: true, appearance: "monochrome", to: "https://www.seel.com" },
           "Seel Resolution Center"
         ),
         " to resolve your package issue and get compensation up to the full value of your order!"
@@ -163,11 +157,7 @@ export default (root, { name, widgetStatus, quote }) => {
         ]
       ),
       root.createComponent(View),
-      root.createComponent(
-        Text,
-        { id: `${name}-description-text`, appearance: "subdued" },
-        createDescription(quote)
-      ),
+      root.createComponent(Text, { id: `${name}-description-text`, appearance: "subdued" }, createDescription(quote)),
     ]
   );
 

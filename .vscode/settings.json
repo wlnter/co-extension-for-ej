@@ -1,0 +1,9 @@
+{
+  "prettier.printWidth": 120,
+  "prettier.singleQuote": false,
+  "prettier.jsxSingleQuote": false,
+  "prettier.trailingComma": "es5",
+  "prettier.bracketSameLine": true,
+  "prettier.vueIndentScriptAndStyle": true,
+  "prettier.endOfLine": "lf"
+}

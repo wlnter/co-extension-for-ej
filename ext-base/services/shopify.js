@@ -47,11 +47,7 @@ export const getProductVariant = async ({ shop, query }, line) => {
     }`
   );
   if (errors) {
-    console.log(
-      `Syntax error in GraphQL query: ${errors
-        .map((err) => err.message)
-        .join(",")}`
-    );
+    console.log(`Syntax error in GraphQL query: ${errors.map((err) => err.message).join(",")}`);
     return null;
   } else if (data) {
     const { node: variant, product } = data;
@@ -72,20 +68,15 @@ export const constructCart = async ({ lines, shop, query }) => {
       cartLine: { quantity, cost, attributes, merchandise },
     };
   });
-  let items = await Promise.all(
-    itemsInCart.map((item) => getProductVariant({ lines, shop, query }, item))
-  );
+  let items = await Promise.all(itemsInCart.map((item) => getProductVariant({ lines, shop, query }, item)));
   items = items.filter(Boolean) || [];
   const cartLines = items.map(({ variant, product, cartLine }) => {
     const { quantity, merchandise } = cartLine;
-    const {
-      price,
-      original_price,
-      discounted_price,
-      line_price,
-      final_price,
-      final_line_price,
-    } = calculatePrices({ variant, product, cartLine });
+    const { price, original_price, discounted_price, line_price, final_price, final_line_price } = calculatePrices({
+      variant,
+      product,
+      cartLine,
+    });
     return {
       id: convertGidToId(variant.id),
       quantity,
@@ -137,22 +128,6 @@ export const getOrCreateDeviceId = async ({ storage }) => {
   return deviceId;
 };
 
-export const updateCartAttributes = async (
-  { applyAttributeChange },
-  attributes
-) => {
-  const result = await Promise.all(
-    Object.entries(attributes).map(([key, value]) =>
-      applyAttributeChange({
-        type: "updateAttribute",
-        key,
-        value,
-      })
-    )
-  ).catch(console.log);
-  return result;
-};
-
 export const queryNodeByProps = (root, property) => {
   for (let i = 0, len = root?.children?.length; i < len; i++) {
     const child = root.children[i];
@@ -180,20 +155,44 @@ export const queryNodeByProps = (root, property) => {
   }
 };
 
+let isTaskRunning = false;
+const apiTaskQueue = [];
+const runApiTask = () => {
+  debugger;
+  if (isTaskRunning) return;
+  if (apiTaskQueue.length === 0) return;
+  isTaskRunning = true;
+  const task = apiTaskQueue.pop();
+  task
+    .fn()
+    .then(task.resolve)
+    .catch(task.reject)
+    .finally(() => {
+      isTaskRunning = false;
+      runApiTask();
+    });
+};
+export function applyCartLinesChange(api, queries) {
+  return new Promise((resolve, reject) => {
+    apiTaskQueue.push({ fn: () => api.applyCartLinesChange(queries), resolve, reject });
+    runApiTask();
+  });
+}
+export function updateCartAttributes(api, queries) {
+  return new Promise((resolve, reject) => {
+    apiTaskQueue.push({ fn: () => api.applyAttributeChange(queries), resolve, reject });
+    runApiTask();
+  });
+}
+
 export const updateCart = async (
   api,
-  {
-    quote,
-    currentWidgetStatus,
-    seelVariantMatchedWithQuote,
-    seelVariantsNotMatchedWithQuote,
-  }
+  { quote, currentWidgetStatus, seelVariantMatchedWithQuote, seelVariantsNotMatchedWithQuote, type }
 ) => {
-  const { applyCartLinesChange } = api;
   // Remove variant whose variantId is not matched with quote
   const promises =
     seelVariantsNotMatchedWithQuote?.map((variant) => {
-      return applyCartLinesChange({
+      return applyCartLinesChange(api, {
         type: "removeCartLine",
         id: String(variant.id),
         quantity: variant.quantity,
@@ -205,7 +204,7 @@ export const updateCart = async (
     if (seelVariantMatchedWithQuote) {
       const { id, merchandise, quantity } = seelVariantMatchedWithQuote;
       if (quantity !== 1) {
-        const resp = await applyCartLinesChange({
+        const resp = await applyCartLinesChange(api, {
           type: "updateCartLine",
           id: String(id),
           merchandiseId: String(merchandise?.id),
@@ -217,7 +216,7 @@ export const updateCart = async (
         };
       }
     } else {
-      const resp = await applyCartLinesChange({
+      const resp = await applyCartLinesChange(api, {
         type: "addCartLine",
         merchandiseId: convertIdToGid(quote.variantId),
         quantity: 1,
@@ -228,7 +227,7 @@ export const updateCart = async (
     // Remove variant whose productId is the same as seelProductId
     if (seelVariantMatchedWithQuote) {
       const { id, quantity } = seelVariantMatchedWithQuote;
-      const resp = await applyCartLinesChange({
+      const resp = await applyCartLinesChange(api, {
         type: "removeCartLine",
         id: String(id),
         quantity,
